@@ -1,5 +1,5 @@
 use reqwest::Client;
-
+use anyhow::{Ok};
 pub struct BoeClient {
     client: Client,
 }
@@ -12,7 +12,7 @@ impl BoeClient {
     }
 
     pub async fn fetch_codigo_penal_xml(&self) -> anyhow::Result<String>{
-        let url = "https://www.boe.es/datosabiertos/api/legislacion-consolidada/id/BOE-A-1995-25444/texto";
+        let url = "https://www.boe.es/datosabiertos/api/legislacion-consolidada/id/BOE-A-1995-25444/texto/bloque/a234";
 
         let response = self.client
             .get(url)

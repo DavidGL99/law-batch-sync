@@ -1,4 +1,4 @@
-use sqlx::{PgPool, postgres::PgPoolOptions, query};
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use anyhow::Result;
 use crate::model::articulo::Articulo;
 
@@ -11,7 +11,7 @@ pub async fn create_pool(database_url: &str) -> Result<PgPool> {
     Ok(pool)
 }
 
-pub async fn upsert_articulo(pool: &PgPool, articulo: &Articulo) -> Result<()> {
+pub async fn insert_articulo(pool: &PgPool, articulo: &Articulo) -> Result<()> {
     sqlx::query!(
         r#"
         INSERT INTO articulos (bloque_id, articulo_numero, id_norma, fecha_publicacion, fecha_vigencia)

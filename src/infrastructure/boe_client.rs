@@ -3,9 +3,8 @@ use reqwest::Client;
 use anyhow::{Result};
 use quick_xml::events::Event;
 use quick_xml::Reader;
-use regex::Regex;
-use serde::de::value;
-use crate::model::articulo::Articulo;
+use super::openai_client::OpenAIClient;
+
 pub struct BoeClient {
     client: Client,
 }
@@ -28,17 +27,22 @@ impl BoeClient {
             .text()
             .await?;
 
-        self.parse_articulo(&response).await?;
+        parse_articulo(&response).await?;
         
         Ok(response)
     }
+}
 
-    pub async fn parse_articulo(&self, xml: &str) -> Result<String> {
+
+async fn parse_articulo(xml: &str) -> Result<String> {
         let mut reader = Reader::from_str(xml);
         reader.trim_text(true);
         let mut buf = Vec::new();
         //let mut bloque_id = String::new();
+        let mut id_norma = None;
+        let mut texto_articulo = String::new();
 
+        let mut dentro_parrafo_valido = false;
         loop {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(e)) if e.name().as_ref() == b"bloque" => {
@@ -52,31 +56,60 @@ impl BoeClient {
                             b"titulo" => titulo = Some(attr.unescape_value().unwrap().to_string()),
                             _ => {}
                         }
-
                     }
-                    print!("id: {:?}, tipo: {:?}, titulo: {:?}", id, tipo, titulo)
 
                 }
                 Ok(Event::Start(e)) if e.name().as_ref() == b"version" => {
-                    let mut fecha_vigencia = None;
-                    //let mut id_norma = None;
                     for attr in e.attributes().flatten(){
                         match attr.key.as_ref() {
-                            b"fecha_vigencia" => {
-                                let  value = attr.unescape_value().unwrap();
-                                fecha_vigencia = Some(NaiveDate::parse_from_str(&value, "%Y%m%d").unwrap());
-                                println!("fecha: {:?}", fecha_vigencia)
-                            },
+                            b"id_norma" => {
+                                texto_articulo = String::new();
+                                id_norma = Some(attr.unescape_value().unwrap().to_string());
+                            }
                             _=>{}
                         }
                     }
+                }
+                Ok(Event::Start(e)) if e.name().as_ref() == b"p" => {
+
+                    let mut clase = None;
+
+                    for attr in e.attributes().flatten() {
+                        if attr.key.as_ref() == b"class" {
+                            clase = Some(attr.unescape_value().unwrap().to_string());
+                        }
+                    }
+
+                    if let Some(c) = clase {
+                        if c == "parrafo" {
+                            dentro_parrafo_valido = true;
+                        }
+                    }
+                }   
+
+                Ok(Event::Text(e)) if dentro_parrafo_valido => {
+                    texto_articulo.push_str(&e.unescape().unwrap());
+                    texto_articulo.push('\n');
+                }
+
+                Ok(Event::End(e)) if e.name().as_ref() == b"p" => {
+                    dentro_parrafo_valido = false;
                 }
                 Ok(Event::Eof) => break,
                 Err(e) => panic!("Error: {:?}", e),
                 _ => {}
             }
         }
+        println!("{:?}", texto_articulo);
+        let client = OpenAIClient::new();
+        
+         match client.chat(&texto_articulo).await {
+            Ok(response) => println!("Respuesta: {}", response),
+            Err(e) => eprintln!("Error: {}", e),
+        }
+         
+       
 
-        Ok("31".to_string())
+
+        Ok("".to_string())
     }
-}

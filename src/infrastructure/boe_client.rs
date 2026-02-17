@@ -1,4 +1,3 @@
-use chrono::NaiveDate;
 use reqwest::Client;
 use anyhow::{Result};
 use quick_xml::events::Event;
@@ -17,7 +16,7 @@ impl BoeClient {
     }
 
     pub async fn fetch_codigo_penal_xml(&self) -> Result<String>{
-        let url = "https://www.boe.es/datosabiertos/api/legislacion-consolidada/id/BOE-A-1995-25444/texto/bloque/a234";
+        let url = "https://www.boe.es/datosabiertos/api/legislacion-consolidada/id/BOE-A-1995-25444/texto/bloque/a138";
 
         let response = self.client
             .get(url)
